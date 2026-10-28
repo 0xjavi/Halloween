@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>🎃 Proyector En Vivo - Halloween Party</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: #070709;
+      color: #f0f0f5;
+      font-family: system-ui, -apple-system, sans-serif;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+      user-select: none;
+    }
+
+    /* Fondo borroso dinámico con la misma foto para llenar toda la pantalla */
+    #bgBlur {
+      position: absolute;
+      inset: -30px;
+      background-size: cover;
+      background-position: center;
+      filter: blur(35px) brightness(0.3);
+      transition: background-image 1s ease-in-out;
+      z-index: 1;
+    }
+
+    /* Contenedor principal de la diapositiva */
+    .stage {
+      position: relative;
+      z-index: 2;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px;
+    }
+
+    #slideImg {
+      max-width: 88vw;
+      max-height: 85vh;
+      object-fit: contain;
+      border-radius: 20px;
+      border: 3px solid #ff6600;
+      box-shadow: 0 15px 60px rgba(0, 0, 0, 0.9), 0 0 35px rgba(255, 102, 0, 0.25);
+      opacity: 0;
+      transform: scale(0.97);
+      transition: opacity 0.8s ease, transform 0.8s ease;
+    }
+
+    #slideImg.visible {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    /* Etiqueta del autor abajo al centro */
+    .author-pill {
+      position: absolute;
+      bottom: 35px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 3;
+      background: rgba(18, 18, 26, 0.9);
+      border: 2px solid #ff6600;
+      padding: 12px 30px;
+      border-radius: 50px;
+      font-size: 26px;
+      font-weight: 800;
+      color: #fff;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.8);
+      white-space: nowrap;
+    }
+    .author-pill span {
+      color: #ff6600;
+    }
+
+    /* Cabecera superior izquierda */
+    .top-badge {
+      position: absolute;
+      top: 30px;
+      left: 35px;
+      z-index: 3;
+      background: rgba(18, 18, 26, 0.85);
+      border: 1px solid #3f3f52;
+      padding: 12px 22px;
+      border-radius: 16px;
+      font-size: 20px;
+      font-weight: bold;
+      color: #ff6600;
+    }
+
+    /* Tarjeta QR fija en la esquina inferior derecha para que escaneen directo del proyector */
+    .qr-widget {
+      position: absolute;
+      bottom: 30px;
+      right: 35px;
+      z-index: 3;
+      background: rgba(18, 18, 26, 0.92);
+      border: 2px solid #ff6600;
+      border-radius: 18px;
+      padding: 14px;
+      text-align: center;
+      width: 160px;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.8);
+    }
+    .qr-widget img {
+      width: 100%;
+      border-radius: 10px;
+      background: #fff;
+      padding: 6px;
+      margin-bottom: 6px;
+    }
+    .qr-widget p {
+      font-size: 12px;
+      font-weight: 700;
+      color: #f0f0f5;
+      line-height: 1.3;
+    }
+
+    /* Pantalla de espera cuando aún no hay fotos */
+    .empty-state {
+      position: absolute;
+      inset: 0;
+      z-index: 4;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #0d0d11;
+      text-align: center;
+      padding: 20px;
+    }
+    .empty-state h1 {
+      font-size: 50px;
+      color: #ff6600;
+      margin-bottom: 15px;
+    }
+    .empty-state p {
+      font-size: 24px;
+      color: #9a9aa6;
+    }
+
+    /* Botón discreto de pantalla completa arriba a la derecha */
+    .fs-btn {
+      position: absolute;
+      top: 30px;
+      right: 35px;
+      z-index: 5;
+      background: rgba(255, 102, 0, 0.2);
+      border: 1px solid #ff6600;
+      color: #fff;
+      padding: 8px 14px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 13px;
+      opacity: 0.4;
+      transition: opacity 0.2s;
+    }
+    .fs-btn:hover { opacity: 1; }
+  </style>
+</head>
+<body>
+
+  <div id="bgBlur"></div>
+
+  <div class="top-badge">
+    🎃 Halloween Party • <span id="counter">0</span> fotos
+  </div>
+
+  <button class="fs-btn" onclick="toggleFullScreen()">⛶ Pantalla Completa</button>
+
+  <div class="stage">
+    <img id="slideImg" src="" alt="Foto de la fiesta">
+  </div>
+
+  <div class="author-pill" id="authorBox" style="display: none;">
+    📸 Subida por: <span id="authorName">Anónimo 👻</span>
+  </div>
+
+  <!-- QR en la esquina apuntando a tu página de subida -->
+  <div class="qr-widget">
+    <img src="https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=https%3A%2F%2F0xjavi.github.io%2FHalloween%2F" alt="QR">
+    <p>¡Escanea y sube tu foto a la pantalla!</p>
+  </div>
+
+  <div class="empty-state" id="emptyState">
+    <h1>🎃 ¡Bienvenidos a la Fiesta! 👻</h1>
+    <p>Escanea el código QR para subir la primera foto de la noche...</p>
+  </div>
+
+  <script>
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzyYj7LAgxpP3vA5xoJQQpotsSN9aLfUxL5l22IKofJTA5kVDFTv8a1HpVLz51Gc3BN/exec";
+    const SLIDE_DURATION = 6000; // 6 segundos por foto
+    const REFRESH_INTERVAL = 20000; // Busca fotos nuevas cada 20 segundos
+
+    let photos = [];
+    let currentIndex = 0;
+    let knownIds = new Set();
+    let priorityQueue = []; // Si entra una foto nueva, la mostramos enseguida
+
+    async function fetchPhotos() {
+      try {
+        const res = await fetch(`${SCRIPT_URL}?action=getPhotos&t=${Date.now()}`, {
+          method: 'GET',
+          redirect: 'follow'
+        });
+        const list = await res.json();
+
+        if (Array.isArray(list)) {
+          // Detectar si entraron fotos nuevas para darles prioridad en pantalla
+          list.forEach(item => {
+            if (!knownIds.has(item.id)) {
+              knownIds.add(item.id);
+              if (photos.length > 0) {
+                priorityQueue.push(item);
+              }
+            }
+          });
+
+          photos = list;
+          document.getElementById('counter').innerText = photos.length;
+
+          if (photos.length > 0) {
+            document.getElementById('emptyState').style.display = 'none';
+            document.getElementById('authorBox').style.display = 'block';
+          }
+        }
+      } catch (err) {
+        console.error("Error actualizando proyector:", err);
+      }
+    }
+
+    function showNextSlide() {
+      if (photos.length === 0) return;
+
+      let nextPhoto;
+      // Si alguien acaba de subir una foto nueva, sale primero
+      if (priorityQueue.length > 0) {
+        nextPhoto = priorityQueue.shift();
+      } else {
+        if (currentIndex >= photos.length) currentIndex = 0;
+        nextPhoto = photos[currentIndex];
+        currentIndex++;
+      }
+
+      const imgUrl = `https://drive.google.com/thumbnail?id=${nextPhoto.id}&sz=w1600`;
+      const slideImg = document.getElementById('slideImg');
+      const bgBlur = document.getElementById('bgBlur');
+      const authorName = document.getElementById('authorName');
+
+      // Efecto de transición suave
+      slideImg.classList.remove('visible');
+
+      setTimeout(() => {
+        // Precargar la imagen antes de mostrarla para que no parpadee
+        const preload = new Image();
+        preload.src = imgUrl;
+        preload.onload = () => {
+          slideImg.src = imgUrl;
+          bgBlur.style.backgroundImage = `url('${imgUrl}')`;
+          authorName.innerText = nextPhoto.author || "Anónimo 👻";
+          slideImg.classList.add('visible');
+        };
+      }, 600);
+    }
+
+    function toggleFullScreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen();
+      } else {
+        document.exitFullscreen();
+      }
+    }
+
+    // Iniciar al abrir la página
+    window.onload = async () => {
+      await fetchPhotos();
+      showNextSlide();
+      setInterval(showNextSlide, SLIDE_DURATION);
+      setInterval(fetchPhotos, REFRESH_INTERVAL);
+    };
+  </script>
+</body>
+</html>
